@@ -40,7 +40,14 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router": "^7.9.1",
-    "vite-tsconfig-paths": "^5.0.1"
+    "vite-tsconfig-paths": "^5.0.1",
+    "stream": "0.0.3",
+    "next": "15.5.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "0.544.0",
+    "tailwind-merge": "3.3.1",
+    "tailwindcss-animate": "1.0.7"
   },
   "devDependencies": {
     "@shopify/api-codegen-preset": "^1.1.1",
@@ -59,7 +66,9 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "^3.2.4",
     "typescript": "^5.2.2",
-    "vite": "^6.2.2"
+    "vite": "^6.2.2",
+    "tailwindcss": "4.1.14",
+    "postcss": "8.5.6"
   },
   "workspaces": [
     "extensions/*"

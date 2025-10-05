@@ -1,8 +1,9 @@
-import { type ActionFunction, type LoaderFunction } from 'react-router'
-import { redirect } from '@remix-run/node'
-import { useLoaderData, useNavigate } from 'react-router'
-import { authenticate } from '../shopify.server'
-import { generateOptimizedContent, analyzeProductImages, type ShopifyProduct } from '../utils/openai.server'
+"use client"
+
+import { type ActionFunction, type LoaderFunction, redirect } from "react-router"
+import { useLoaderData, useNavigate } from "react-router"
+import { authenticate } from "../shopify.server"
+import { generateOptimizedContent, analyzeProductImages, type ShopifyProduct } from "../utils/openai.server"
 import {
   Page,
   Layout,
@@ -15,8 +16,8 @@ import {
   Badge,
   Box,
   DataTable,
-} from '@shopify/polaris'
-import { useState } from 'react'
+} from "@shopify/polaris"
+import { useState } from "react"
 
 interface OptimizedContent {
   title: string
@@ -41,34 +42,37 @@ interface LoaderData {
   }
 }
 
-const contentCache = new Map<string, { content: OptimizedContent; originalProduct: { title: string; description: string } }>()
+const contentCache = new Map<
+  string,
+  { content: OptimizedContent; originalProduct: { title: string; description: string } }
+>()
 
 // Helper function to extract image URLs from HTML description
 function extractImagesFromHTML(html: string): string[] {
   if (!html) return []
-  
+
   const imageUrls: string[] = []
-  
+
   // Match <img> tags and extract src attributes
   const imgTagRegex = /<img[^>]+src=["']([^"']+)["']/gi
   let match
-  
+
   while ((match = imgTagRegex.exec(html)) !== null) {
     const url = match[1]
     // Only include valid HTTP/HTTPS URLs
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
       imageUrls.push(url)
     }
   }
-  
+
   return imageUrls
 }
 
 export const action: ActionFunction = async ({ request }) => {
   const { admin } = await authenticate.admin(request)
   const formData = await request.formData()
-  const productId = formData.get('productId') as string
-  const selectedVariant = formData.get('selectedVariant') as string | null
+  const productId = formData.get("productId") as string
+  const selectedVariant = formData.get("selectedVariant") as string | null
 
   const response = await admin.graphql(
     `#graphql
@@ -101,7 +105,7 @@ export const action: ActionFunction = async ({ request }) => {
         }
       }
     `,
-    { variables: { id: productId } }
+    { variables: { id: productId } },
   )
 
   const data = await response.json()
@@ -125,9 +129,9 @@ export const action: ActionFunction = async ({ request }) => {
   const product: ShopifyProduct = {
     id: productNode.id,
     title: productNode.title,
-    description: productNode.description || '',
-    vendor: productNode.vendor || '',
-    productType: productNode.productType || '',
+    description: productNode.description || "",
+    vendor: productNode.vendor || "",
+    productType: productNode.productType || "",
     tags: productNode.tags || [],
     images: productNode.images.edges.map((img: ImageEdge) => ({
       src: img.node.url,
@@ -142,22 +146,22 @@ export const action: ActionFunction = async ({ request }) => {
 
   // Collect all image URLs from both sources
   let allImageUrls: string[] = []
-  
+
   // 1. Get images from product Images section
   const productImageUrls = product.images.map((img) => img.src)
-  
+
   // 2. Extract images from description HTML
-  const descriptionImageUrls = extractImagesFromHTML(productNode.descriptionHtml || '')
-  
+  const descriptionImageUrls = extractImagesFromHTML(productNode.descriptionHtml || "")
+
   // 3. Combine and deduplicate
   allImageUrls = [...new Set([...productImageUrls, ...descriptionImageUrls])]
-  
+
   console.log(`[v0] Found ${productImageUrls.length} images in Images section`)
   console.log(`[v0] Found ${descriptionImageUrls.length} images in description HTML`)
   console.log(`[v0] Total unique images to analyze: ${allImageUrls.length}`)
 
   // Analyze all images (up to 10 total)
-  let imageAnalysis = ''
+  let imageAnalysis = ""
   if (allImageUrls.length > 0) {
     imageAnalysis = await analyzeProductImages(allImageUrls.slice(0, 10))
   }
@@ -172,7 +176,7 @@ export const action: ActionFunction = async ({ request }) => {
     },
   })
 
-  // <CHANGE> Use Remix redirect instead of raw HTTP redirect to maintain App Bridge context
+  // Use Remix redirect instead of raw HTTP redirect to maintain App Bridge context
   return redirect(`/app/generate?productId=${encodeURIComponent(productId)}`)
 }
 
@@ -180,15 +184,15 @@ export const loader: LoaderFunction = async ({ request }) => {
   await authenticate.admin(request)
 
   const url = new URL(request.url)
-  const productId = url.searchParams.get('productId')
+  const productId = url.searchParams.get("productId")
 
   if (!productId || !contentCache.has(productId)) {
-    // <CHANGE> Use Remix redirect here too
-    return redirect('/app')
+    // Use Remix redirect here too
+    return redirect("/app")
   }
 
   const cached = contentCache.get(productId)!
-  
+
   return {
     content: cached.content,
     originalProduct: cached.originalProduct,
@@ -206,23 +210,12 @@ export default function Generate() {
     setTimeout(() => setCopiedField(null), 2000)
   }
 
-  const keyFeaturesRows = content.keyFeatures.map((item) => [
-    item.feature,
-    item.benefit,
-  ])
+  const keyFeaturesRows = content.keyFeatures.map((item) => [item.feature, item.benefit])
 
-  const metafieldsRows = content.metafields.map((item) => [
-    item.namespace,
-    item.key,
-    item.type,
-    item.value,
-  ])
+  const metafieldsRows = content.metafields.map((item) => [item.namespace, item.key, item.type, item.value])
 
   return (
-    <Page
-      title="Generated SEO Content"
-      backAction={{ content: 'Products', onAction: () => navigate('/app') }}
-    >
+    <Page title="Generated SEO Content" backAction={{ content: "Products", onAction: () => navigate("/app") }}>
       <Layout>
         {/* Original Product */}
         <Layout.Section>
@@ -236,7 +229,7 @@ export default function Generate() {
                   {originalProduct.title}
                 </Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  {originalProduct.description || 'No description'}
+                  {originalProduct.description || "No description"}
                 </Text>
               </Box>
             </BlockStack>
@@ -251,11 +244,8 @@ export default function Generate() {
                 <Text as="h2" variant="headingMd">
                   Optimized Title
                 </Text>
-                <Button
-                  onClick={() => copyToClipboard(content.title, 'title')}
-                  variant="plain"
-                >
-                  {copiedField === 'title' ? 'Copied!' : 'Copy'}
+                <Button onClick={() => copyToClipboard(content.title, "title")} variant="plain">
+                  {copiedField === "title" ? "Copied!" : "Copy"}
                 </Button>
               </InlineStack>
               <Text as="p" variant="bodyLg" fontWeight="semibold">
@@ -274,23 +264,20 @@ export default function Generate() {
                   Complete Product Description
                 </Text>
                 <Button
-                  onClick={() => copyToClipboard(content.productDescription, 'fullDescription')}
+                  onClick={() => copyToClipboard(content.productDescription, "fullDescription")}
                   variant="primary"
                 >
-                  {copiedField === 'fullDescription' ? 'Copied!' : 'Copy All'}
+                  {copiedField === "fullDescription" ? "Copied!" : "Copy All"}
                 </Button>
               </InlineStack>
-              <Box
-                padding="400"
-                background="bg-surface-secondary"
-                borderRadius="200"
-              >
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', fontFamily: 'monospace' }}>
+              <Box padding="400" background="bg-surface-secondary" borderRadius="200">
+                <div style={{ whiteSpace: "pre-wrap", lineHeight: "1.6", fontFamily: "monospace" }}>
                   {content.productDescription}
                 </div>
               </Box>
               <Text as="p" variant="bodySm" tone="subdued">
-                This includes: Opening description, Key Features & Benefits, Why You Should Buy, and FAQs - ready to paste into Shopify!
+                This includes: Opening description, Key Features & Benefits, Why You Should Buy, and FAQs - ready to
+                paste into Shopify!
               </Text>
             </BlockStack>
           </Card>
@@ -304,8 +291,8 @@ export default function Generate() {
                 Reference: Key Features & Benefits
               </Text>
               <DataTable
-                columnContentTypes={['text', 'text']}
-                headings={['Feature', 'Benefit']}
+                columnContentTypes={["text", "text"]}
+                headings={["Feature", "Benefit"]}
                 rows={keyFeaturesRows}
               />
             </BlockStack>
@@ -337,7 +324,7 @@ export default function Generate() {
               <Text as="h2" variant="headingMd">
                 SEO Keywords
               </Text>
-              
+
               <BlockStack gap="300">
                 <Box>
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -361,7 +348,9 @@ export default function Generate() {
                   <Box paddingBlockStart="200">
                     <InlineStack gap="200" wrap>
                       {content.longTailKeywords.map((keyword, index) => (
-                        <Badge key={index} tone="info">{keyword}</Badge>
+                        <Badge key={index} tone="info">
+                          {keyword}
+                        </Badge>
                       ))}
                     </InlineStack>
                   </Box>
@@ -379,16 +368,15 @@ export default function Generate() {
                 <Text as="h2" variant="headingMd">
                   Shopify Product Tags
                 </Text>
-                <Button
-                  onClick={() => copyToClipboard(content.shopifyTags.join(', '), 'tags')}
-                  variant="plain"
-                >
-                  {copiedField === 'tags' ? 'Copied!' : 'Copy'}
+                <Button onClick={() => copyToClipboard(content.shopifyTags.join(", "), "tags")} variant="plain">
+                  {copiedField === "tags" ? "Copied!" : "Copy"}
                 </Button>
               </InlineStack>
               <InlineStack gap="200" wrap>
                 {content.shopifyTags.map((tag, index) => (
-                  <Badge key={index} tone="success">{tag}</Badge>
+                  <Badge key={index} tone="success">
+                    {tag}
+                  </Badge>
                 ))}
               </InlineStack>
             </BlockStack>
@@ -409,12 +397,8 @@ export default function Generate() {
                     <Text as="p" variant="bodyMd" fontWeight="semibold">
                       Meta Title
                     </Text>
-                    <Button
-                      onClick={() => copyToClipboard(content.metaTitle, 'metaTitle')}
-                      variant="plain"
-                      size="slim"
-                    >
-                      {copiedField === 'metaTitle' ? 'Copied!' : 'Copy'}
+                    <Button onClick={() => copyToClipboard(content.metaTitle, "metaTitle")} variant="plain" size="slim">
+                      {copiedField === "metaTitle" ? "Copied!" : "Copy"}
                     </Button>
                   </InlineStack>
                   <Text as="p" variant="bodyMd">
@@ -427,11 +411,11 @@ export default function Generate() {
                       Meta Description
                     </Text>
                     <Button
-                      onClick={() => copyToClipboard(content.metaDescription, 'metaDesc')}
+                      onClick={() => copyToClipboard(content.metaDescription, "metaDesc")}
                       variant="plain"
                       size="slim"
                     >
-                      {copiedField === 'metaDesc' ? 'Copied!' : 'Copy'}
+                      {copiedField === "metaDesc" ? "Copied!" : "Copy"}
                     </Button>
                   </InlineStack>
                   <Text as="p" variant="bodyMd">
@@ -451,8 +435,8 @@ export default function Generate() {
                 Custom Metafields
               </Text>
               <DataTable
-                columnContentTypes={['text', 'text', 'text', 'text']}
-                headings={['Namespace', 'Key', 'Type', 'Value']}
+                columnContentTypes={["text", "text", "text", "text"]}
+                headings={["Namespace", "Key", "Type", "Value"]}
                 rows={metafieldsRows}
               />
             </BlockStack>
