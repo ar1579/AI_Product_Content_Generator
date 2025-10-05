@@ -30,3 +30,32 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model GeneratedContent {
+  id                    String   @id @default(uuid())
+  shop                  String
+  productId             String
+  selectedVariant       String?
+  title                 String
+  productDescription    String
+  keyFeatures           String   // JSON string
+  whyBuy                String   // JSON string
+  faqs                  String   // JSON string
+  imageRecommendations  String   // JSON string
+  shortTailKeywords     String   // JSON string
+  longTailKeywords      String   // JSON string
+  shopifyTags           String   // JSON string
+  metaTitle             String
+  metaDescription       String
+  metafields            String   // JSON string
+  originalTitle         String
+  originalDescription   String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  expiresAt             DateTime // Cache expiration
+
+  @@unique([shop, productId, selectedVariant])
+  @@index([shop])
+  @@index([productId])
+  @@index([expiresAt])
+}

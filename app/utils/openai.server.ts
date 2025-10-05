@@ -1,6 +1,11 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
+// Validate OpenAI API key on module load
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY environment variable is required but not set")
+}
+
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
@@ -36,6 +41,9 @@ export async function generateOptimizedContent(
   imageAnalysis?: string,
   selectedVariant?: string
 ): Promise<OptimizedContent> {
+  const maxRetries = 3
+  let lastError: Error | null = null
+
   const variantContext = selectedVariant
     ? `\n\nFocus on this specific variant: ${selectedVariant}`
     : ''
@@ -109,58 +117,156 @@ IMPORTANT RULES:
 - Make the productDescription ready to copy/paste into Shopify
 - Return ONLY valid JSON, no markdown code blocks or extra text`
 
-  const { text } = await generateText({
-    model: openai('gpt-4o'),
-    prompt,
-    temperature: 0.7,
-  })
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 90000) // 90 second timeout
 
-  // Clean up the response - remove markdown code blocks if present
-  let cleanedText = text.trim()
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
-  }
+      const { text } = await generateText({
+        model: openai('gpt-4o'),
+        prompt,
+        temperature: 0.7,
+        maxRetries: 2,
+        abortSignal: controller.signal,
+      })
 
-  // Try to extract JSON object
-  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) {
-    console.error('Failed to find JSON in response:', cleanedText.substring(0, 500))
-    throw new Error('Failed to parse AI response - no JSON found')
-  }
+      clearTimeout(timeoutId)
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0])
-    return parsed
-  } catch (error) {
-    console.error('JSON parse error:', error)
-    console.error('Attempted to parse:', jsonMatch[0].substring(0, 500))
-    throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      // Clean up the response - remove markdown code blocks if present
+      let cleanedText = text.trim()
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      }
+
+      // Try to extract JSON object
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        console.error('Failed to find JSON in response:', cleanedText.substring(0, 500))
+        throw new Error('Failed to parse AI response - no JSON found')
+      }
+
+      try {
+        const parsed = JSON.parse(jsonMatch[0])
+        
+        // Validate required fields
+        const requiredFields = [
+          'title', 'productDescription', 'keyFeatures', 'whyBuy', 'faqs',
+          'imageRecommendations', 'shortTailKeywords', 'longTailKeywords',
+          'shopifyTags', 'metaTitle', 'metaDescription', 'metafields'
+        ]
+        
+        for (const field of requiredFields) {
+          if (!(field in parsed)) {
+            throw new Error(`Missing required field: ${field}`)
+          }
+        }
+        
+        return parsed as OptimizedContent
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError)
+        console.error('Attempted to parse:', jsonMatch[0].substring(0, 500))
+        throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+      }
+    } catch (error) {
+      lastError = error as Error
+      
+      // Check for specific error types
+      if (error instanceof Error) {
+        // Rate limit error
+        if (error.message?.includes('rate_limit') || error.message?.includes('429')) {
+          console.warn(`Rate limit hit on attempt ${attempt}/${maxRetries}. Waiting before retry...`)
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt))
+          continue
+        }
+        
+        // Timeout error
+        if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+          console.warn(`Timeout on attempt ${attempt}/${maxRetries}. Retrying...`)
+          continue
+        }
+        
+        // API key error - don't retry
+        if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+          throw new Error('OpenAI API authentication failed. Please check your API key.')
+        }
+      }
+      
+      // If this was the last attempt, throw the error
+      if (attempt === maxRetries) {
+        console.error(`Failed to generate content after ${maxRetries} attempts:`, lastError)
+        throw new Error(`Failed to generate content after ${maxRetries} attempts: ${lastError.message}`)
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+    }
   }
+  
+  throw lastError!
 }
 
 export async function analyzeProductImages(imageUrls: string[]): Promise<string> {
   if (imageUrls.length === 0) return ''
 
-  const { text } = await generateText({
-    model: openai('gpt-4o'),
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: 'Analyze these product images in detail. Describe: materials, colors, design features, quality indicators, use cases shown, and any unique characteristics. Be specific and thorough - this will help generate better product descriptions.',
-          },
-          ...imageUrls.slice(0, 5).map((url) => ({
-            type: 'image' as const,
-            image: url,
-          })),
-        ],
-      },
-    ],
-  })
+  const maxRetries = 2
+  let lastError: Error | null = null
 
-  return text
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
+
+      const { text } = await generateText({
+        model: openai('gpt-4o'),
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze these product images in detail. Describe: materials, colors, design features, quality indicators, use cases shown, and any unique characteristics. Be specific and thorough - this will help generate better product descriptions.',
+              },
+              ...imageUrls.slice(0, 5).map((url) => ({
+                type: 'image' as const,
+                image: url,
+              })),
+            ],
+          },
+        ],
+        abortSignal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+      return text
+    } catch (error) {
+      lastError = error as Error
+      
+      if (error instanceof Error) {
+        // Rate limit error
+        if (error.message?.includes('rate_limit') || error.message?.includes('429')) {
+          console.warn(`Rate limit hit during image analysis on attempt ${attempt}/${maxRetries}`)
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt))
+          continue
+        }
+        
+        // Timeout error
+        if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+          console.warn(`Timeout during image analysis on attempt ${attempt}/${maxRetries}`)
+          continue
+        }
+      }
+      
+      // If this was the last attempt, log error but don't throw (image analysis is optional)
+      if (attempt === maxRetries) {
+        console.error('Failed to analyze images after retries:', lastError)
+        return '' // Return empty string to continue without image analysis
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+    }
+  }
+  
+  return ''
 }

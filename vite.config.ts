@@ -39,6 +39,8 @@ export default defineConfig({
   server: {
     allowedHosts: [host],
     cors: {
+      origin: process.env.SHOPIFY_APP_URL || true,
+      credentials: true,
       preflightContinue: true,
     },
     port: Number(process.env.PORT || 3000),

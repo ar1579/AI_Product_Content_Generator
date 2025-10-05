@@ -4,6 +4,7 @@ import { type ActionFunction, type LoaderFunction, redirect } from "react-router
 import { useLoaderData, useNavigate } from "react-router"
 import { authenticate } from "../shopify.server"
 import { generateOptimizedContent, analyzeProductImages, type ShopifyProduct } from "../utils/openai.server"
+import db from "../db.server"
 import {
   Page,
   Layout,
@@ -18,6 +19,7 @@ import {
   DataTable,
 } from "@shopify/polaris"
 import { useState } from "react"
+import * as cheerio from 'cheerio'
 
 interface OptimizedContent {
   title: string
@@ -42,160 +44,324 @@ interface LoaderData {
   }
 }
 
-const contentCache = new Map<
-  string,
-  { content: OptimizedContent; originalProduct: { title: string; description: string } }
->()
-
-// Helper function to extract image URLs from HTML description
+// Helper function to extract image URLs from HTML description using cheerio
 function extractImagesFromHTML(html: string): string[] {
   if (!html) return []
 
-  const imageUrls: string[] = []
+  try {
+    const $ = cheerio.load(html)
+    const imageUrls: string[] = []
 
-  // Match <img> tags and extract src attributes
-  const imgTagRegex = /<img[^>]+src=["']([^"']+)["']/gi
-  let match
+    $('img').each((_, element) => {
+      const src = $(element).attr('src')
+      if (src) {
+        // Only include valid HTTP/HTTPS URLs
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          imageUrls.push(src)
+        } else if (src.startsWith('//')) {
+          // Handle protocol-relative URLs
+          imageUrls.push(`https:${src}`)
+        }
+      }
+    })
 
-  while ((match = imgTagRegex.exec(html)) !== null) {
-    const url = match[1]
-    // Only include valid HTTP/HTTPS URLs
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      imageUrls.push(url)
-    }
+    return imageUrls
+  } catch (error) {
+    console.error('Error parsing HTML for images:', error)
+    return []
+  }
+}
+
+// Helper function to save content to database
+async function saveGeneratedContent(
+  shop: string,
+  productId: string,
+  selectedVariant: string | null,
+  content: OptimizedContent,
+  originalProduct: { title: string; description: string }
+) {
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7) // Cache for 7 days
+
+  await db.generatedContent.upsert({
+    where: {
+      shop_productId_selectedVariant: {
+        shop,
+        productId,
+        selectedVariant: selectedVariant || null,
+      },
+    },
+    create: {
+      shop,
+      productId,
+      selectedVariant: selectedVariant || null,
+      title: content.title,
+      productDescription: content.productDescription,
+      keyFeatures: JSON.stringify(content.keyFeatures),
+      whyBuy: JSON.stringify(content.whyBuy),
+      faqs: JSON.stringify(content.faqs),
+      imageRecommendations: JSON.stringify(content.imageRecommendations),
+      shortTailKeywords: JSON.stringify(content.shortTailKeywords),
+      longTailKeywords: JSON.stringify(content.longTailKeywords),
+      shopifyTags: JSON.stringify(content.shopifyTags),
+      metaTitle: content.metaTitle,
+      metaDescription: content.metaDescription,
+      metafields: JSON.stringify(content.metafields),
+      originalTitle: originalProduct.title,
+      originalDescription: originalProduct.description,
+      expiresAt,
+    },
+    update: {
+      title: content.title,
+      productDescription: content.productDescription,
+      keyFeatures: JSON.stringify(content.keyFeatures),
+      whyBuy: JSON.stringify(content.whyBuy),
+      faqs: JSON.stringify(content.faqs),
+      imageRecommendations: JSON.stringify(content.imageRecommendations),
+      shortTailKeywords: JSON.stringify(content.shortTailKeywords),
+      longTailKeywords: JSON.stringify(content.longTailKeywords),
+      shopifyTags: JSON.stringify(content.shopifyTags),
+      metaTitle: content.metaTitle,
+      metaDescription: content.metaDescription,
+      metafields: JSON.stringify(content.metafields),
+      originalTitle: originalProduct.title,
+      originalDescription: originalProduct.description,
+      expiresAt,
+      updatedAt: new Date(),
+    },
+  })
+}
+
+// Helper function to load content from database
+async function loadGeneratedContent(
+  shop: string,
+  productId: string,
+  selectedVariant: string | null
+): Promise<{ content: OptimizedContent; originalProduct: { title: string; description: string } } | null> {
+  const cached = await db.generatedContent.findUnique({
+    where: {
+      shop_productId_selectedVariant: {
+        shop,
+        productId,
+        selectedVariant: selectedVariant || null,
+      },
+    },
+  })
+
+  if (!cached) return null
+
+  // Check if cache is expired
+  if (new Date() > cached.expiresAt) {
+    // Delete expired cache
+    await db.generatedContent.delete({
+      where: {
+        id: cached.id,
+      },
+    })
+    return null
   }
 
-  return imageUrls
+  return {
+    content: {
+      title: cached.title,
+      productDescription: cached.productDescription,
+      keyFeatures: JSON.parse(cached.keyFeatures),
+      whyBuy: JSON.parse(cached.whyBuy),
+      faqs: JSON.parse(cached.faqs),
+      imageRecommendations: JSON.parse(cached.imageRecommendations),
+      shortTailKeywords: JSON.parse(cached.shortTailKeywords),
+      longTailKeywords: JSON.parse(cached.longTailKeywords),
+      shopifyTags: JSON.parse(cached.shopifyTags),
+      metaTitle: cached.metaTitle,
+      metaDescription: cached.metaDescription,
+      metafields: JSON.parse(cached.metafields),
+    },
+    originalProduct: {
+      title: cached.originalTitle,
+      description: cached.originalDescription,
+    },
+  }
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const { admin } = await authenticate.admin(request)
+  const { admin, session } = await authenticate.admin(request)
   const formData = await request.formData()
-  const productId = formData.get("productId") as string
-  const selectedVariant = formData.get("selectedVariant") as string | null
+  
+  // Validate productId
+  const productId = formData.get("productId")
+  if (!productId || typeof productId !== "string" || !productId.startsWith("gid://")) {
+    throw new Response("Invalid product ID", { status: 400 })
+  }
 
-  const response = await admin.graphql(
-    `#graphql
-      query getProduct($id: ID!) {
-        product(id: $id) {
-          id
-          title
-          description
-          descriptionHtml
-          vendor
-          productType
-          tags
-          images(first: 5) {
-            edges {
-              node {
-                url
-                altText
+  // Validate selectedVariant
+  const selectedVariant = formData.get("selectedVariant")
+  if (selectedVariant && typeof selectedVariant !== "string") {
+    throw new Response("Invalid variant selection", { status: 400 })
+  }
+
+  const shop = session.shop
+
+  try {
+    const response = await admin.graphql(
+      `#graphql
+        query getProduct($id: ID!) {
+          product(id: $id) {
+            id
+            title
+            description
+            descriptionHtml
+            vendor
+            productType
+            tags
+            images(first: 5) {
+              edges {
+                node {
+                  url
+                  altText
+                }
               }
             }
-          }
-          variants(first: 10) {
-            edges {
-              node {
-                title
-                price
-                sku
+            variants(first: 10) {
+              edges {
+                node {
+                  title
+                  price
+                  sku
+                }
               }
             }
           }
         }
+      `,
+      { variables: { id: productId } },
+    )
+
+    const data = await response.json()
+
+    // Check for GraphQL errors
+    if (data.errors) {
+      console.error("GraphQL errors:", data.errors)
+      throw new Response("Failed to fetch product data", { status: 500 })
+    }
+
+    if (!data.data?.product) {
+      throw new Response("Product not found", { status: 404 })
+    }
+
+    const productNode = data.data.product
+
+    interface ImageEdge {
+      node: {
+        url: string
+        altText: string | null
       }
-    `,
-    { variables: { id: productId } },
-  )
-
-  const data = await response.json()
-  const productNode = data.data.product
-
-  interface ImageEdge {
-    node: {
-      url: string
-      altText: string | null
     }
-  }
 
-  interface VariantEdge {
-    node: {
-      title: string | null
-      price: string
-      sku: string | null
+    interface VariantEdge {
+      node: {
+        title: string | null
+        price: string
+        sku: string | null
+      }
     }
+
+    const product: ShopifyProduct = {
+      id: productNode.id,
+      title: productNode.title,
+      description: productNode.description || "",
+      vendor: productNode.vendor || "",
+      productType: productNode.productType || "",
+      tags: productNode.tags || [],
+      images: productNode.images.edges.map((img: ImageEdge) => ({
+        src: img.node.url,
+        alt: img.node.altText || undefined,
+      })),
+      variants: productNode.variants.edges.map((v: VariantEdge) => ({
+        title: v.node.title || undefined,
+        price: v.node.price,
+        sku: v.node.sku || undefined,
+      })),
+    }
+
+    // Collect all image URLs from both sources
+    let allImageUrls: string[] = []
+
+    // 1. Get images from product Images section
+    const productImageUrls = product.images.map((img) => img.src)
+
+    // 2. Extract images from description HTML
+    const descriptionImageUrls = extractImagesFromHTML(productNode.descriptionHtml || "")
+
+    // 3. Combine and deduplicate
+    allImageUrls = [...new Set([...productImageUrls, ...descriptionImageUrls])]
+
+    console.log(`[v0] Found ${productImageUrls.length} images in Images section`)
+    console.log(`[v0] Found ${descriptionImageUrls.length} images in description HTML`)
+    console.log(`[v0] Total unique images to analyze: ${allImageUrls.length}`)
+
+    // Analyze all images (up to 10 total)
+    let imageAnalysis = ""
+    if (allImageUrls.length > 0) {
+      imageAnalysis = await analyzeProductImages(allImageUrls.slice(0, 10))
+    }
+
+    const optimizedContent = await generateOptimizedContent(
+      product,
+      imageAnalysis,
+      selectedVariant ? String(selectedVariant) : undefined
+    )
+
+    // Save to database instead of in-memory cache
+    await saveGeneratedContent(
+      shop,
+      productId,
+      selectedVariant ? String(selectedVariant) : null,
+      optimizedContent,
+      {
+        title: product.title,
+        description: product.description,
+      }
+    )
+
+    // Use Remix redirect instead of raw HTTP redirect to maintain App Bridge context
+    return redirect(`/app/generate?productId=${encodeURIComponent(productId)}${selectedVariant ? `&variant=${encodeURIComponent(String(selectedVariant))}` : ""}`)
+  } catch (error) {
+    console.error("Error generating content:", error)
+    if (error instanceof Response) {
+      throw error
+    }
+    throw new Response("Failed to generate content. Please try again.", { status: 500 })
   }
-
-  const product: ShopifyProduct = {
-    id: productNode.id,
-    title: productNode.title,
-    description: productNode.description || "",
-    vendor: productNode.vendor || "",
-    productType: productNode.productType || "",
-    tags: productNode.tags || [],
-    images: productNode.images.edges.map((img: ImageEdge) => ({
-      src: img.node.url,
-      alt: img.node.altText || undefined,
-    })),
-    variants: productNode.variants.edges.map((v: VariantEdge) => ({
-      title: v.node.title || undefined,
-      price: v.node.price,
-      sku: v.node.sku || undefined,
-    })),
-  }
-
-  // Collect all image URLs from both sources
-  let allImageUrls: string[] = []
-
-  // 1. Get images from product Images section
-  const productImageUrls = product.images.map((img) => img.src)
-
-  // 2. Extract images from description HTML
-  const descriptionImageUrls = extractImagesFromHTML(productNode.descriptionHtml || "")
-
-  // 3. Combine and deduplicate
-  allImageUrls = [...new Set([...productImageUrls, ...descriptionImageUrls])]
-
-  console.log(`[v0] Found ${productImageUrls.length} images in Images section`)
-  console.log(`[v0] Found ${descriptionImageUrls.length} images in description HTML`)
-  console.log(`[v0] Total unique images to analyze: ${allImageUrls.length}`)
-
-  // Analyze all images (up to 10 total)
-  let imageAnalysis = ""
-  if (allImageUrls.length > 0) {
-    imageAnalysis = await analyzeProductImages(allImageUrls.slice(0, 10))
-  }
-
-  const optimizedContent = await generateOptimizedContent(product, imageAnalysis, selectedVariant || undefined)
-
-  contentCache.set(productId, {
-    content: optimizedContent,
-    originalProduct: {
-      title: product.title,
-      description: product.description,
-    },
-  })
-
-  // Use Remix redirect instead of raw HTTP redirect to maintain App Bridge context
-  return redirect(`/app/generate?productId=${encodeURIComponent(productId)}`)
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
-  await authenticate.admin(request)
+  const { session } = await authenticate.admin(request)
 
   const url = new URL(request.url)
   const productId = url.searchParams.get("productId")
+  const selectedVariant = url.searchParams.get("variant")
 
-  if (!productId || !contentCache.has(productId)) {
-    // Use Remix redirect here too
+  if (!productId) {
     return redirect("/app")
   }
 
-  const cached = contentCache.get(productId)!
+  const shop = session.shop
 
-  return {
-    content: cached.content,
-    originalProduct: cached.originalProduct,
+  try {
+    // Load from database
+    const cached = await loadGeneratedContent(shop, productId, selectedVariant)
+
+    if (!cached) {
+      return redirect("/app")
+    }
+
+    return {
+      content: cached.content,
+      originalProduct: cached.originalProduct,
+    }
+  } catch (error) {
+    console.error("Error loading content:", error)
+    return redirect("/app")
   }
 }
 

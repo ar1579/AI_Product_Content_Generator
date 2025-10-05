@@ -1,225 +1,366 @@
-# Shopify App Template - React Router
+# AI Product Content Generator - Shopify App
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using [React Router](https://reactrouter.com/).  It was forked from the [Shopify Remix app template](https://github.com/Shopify/shopify-app-template-remix) and converted to React Router.
+A Shopify app that uses AI to generate SEO-optimized product content including titles, descriptions, FAQs, keywords, and metafields. Built with React Router and powered by OpenAI's GPT-4o.
 
-Rather than cloning this repo, follow the [Quick Start steps](https://github.com/Shopify/shopify-app-template-react-router#quick-start).
+## Features
 
-Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-react-router) for more details on the React Router app package.
+- 🤖 AI-powered content generation using GPT-4o
+- 🖼️ Automatic product image analysis
+- 📝 Comprehensive SEO content including:
+  - Optimized product titles
+  - Detailed product descriptions
+  - Key features and benefits
+  - FAQs
+  - Short-tail and long-tail keywords
+  - Shopify product tags
+  - Meta titles and descriptions
+  - Custom metafields
+- 💾 Database caching for generated content (7-day expiration)
+- 🔄 Support for product variants
+- 📊 Health check endpoint for monitoring
 
-## Upgrading from Remix
+## Prerequisites
 
-If you have an existing Remix app that you want to upgrade to React Router, please follow the [upgrade guide](https://github.com/Shopify/shopify-app-template-react-router/wiki/Upgrading-from-Remix).  Otherwise, please follow the quick start guide below.
+Before you begin, you'll need:
 
-## Quick start
+1. **Node.js**: Version 20.10 or higher ([Download](https://nodejs.org/en/download/))
+2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup)
+3. **Test Store**: Set up a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or [Shopify Plus sandbox](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store)
+4. **Shopify CLI**: Install globally
+   ```bash
+   npm install -g @shopify/cli@latest
+   ```
+5. **OpenAI API Key**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 
-### Prerequisites
+## Environment Variables
 
-Before you begin, you'll need the following:
+Create a `.env` file in the root directory with the following variables:
 
-1. **Node.js**: [Download and install](https://nodejs.org/en/download/) it if you haven't already.
-2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup) if you don't have one.
-3. **Test Store**: Set up either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store) for testing your app.
-4. **Shopify CLI**: [Download and install](https://shopify.dev/docs/apps/tools/cli/getting-started) it if you haven't already.
-```shell
-npm install -g @shopify/cli@latest
+### Required Variables
+
+```env
+# Shopify App Configuration
+SHOPIFY_API_KEY=your_shopify_api_key_here
+SHOPIFY_API_SECRET=your_shopify_api_secret_here
+SHOPIFY_APP_URL=https://your-app-url.com
+SCOPES=write_products,read_products
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### Setup
+### Optional Variables
 
-```shell
+```env
+# Custom Shop Domain (if applicable)
+SHOP_CUSTOM_DOMAIN=your-custom-domain.myshopify.com
+
+# Database Configuration (for production)
+DATABASE_URL=postgresql://user:password@host:port/database
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+```
+
+**Note**: A `.env.example` file is provided as a template. Copy it to `.env` and fill in your values.
+
+## Installation
+
+### 1. Clone or Initialize the App
+
+```bash
+# If using Shopify CLI to create new app
 shopify app init --template=https://github.com/Shopify/shopify-app-template-react-router
+
+# Or clone this repository
+git clone <your-repo-url>
+cd AI_Product_Content_Generator
 ```
 
-### Local Development
+### 2. Install Dependencies
 
-```shell
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+
+```bash
+cp .env.example .env
+# Edit .env with your actual values
+```
+
+### 4. Set Up Database
+
+```bash
+npm run setup
+```
+
+This will:
+- Generate Prisma client
+- Run database migrations
+- Create the SQLite database (for development)
+
+## Development
+
+### Start Development Server
+
+```bash
+npm run dev
+# or
 shopify app dev
 ```
 
-Press P to open the URL to your app. Once you click install, you can start development.
+This will:
+- Start the development server
+- Open a tunnel to your local server
+- Provide a URL to install the app in your test store
 
-Local development is powered by [the Shopify CLI](https://shopify.dev/docs/apps/tools/cli). It logs into your partners account, connects to an app, provides environment variables, updates remote config, creates a tunnel and provides commands to generate extensions.
+Press `P` to open the app URL in your browser.
 
-### Authenticating and querying data
+### Database Management
 
-To authenticate and query data you can use the `shopify` const that is exported from `/app/shopify.server.js`:
+```bash
+# Generate Prisma client after schema changes
+npx prisma generate
 
-```js
-export async function loader({ request }) {
-  const { admin } = await shopify.authenticate.admin(request);
+# Create a new migration
+npx prisma migrate dev --name your_migration_name
 
-  const response = await admin.graphql(`
-    {
-      products(first: 25) {
-        nodes {
-          title
-          description
-        }
-      }
-    }`);
+# Apply migrations
+npx prisma migrate deploy
 
-  const {
-    data: {
-      products: { nodes },
-    },
-  } = await response.json();
-
-  return nodes;
-}
+# Open Prisma Studio (database GUI)
+npx prisma studio
 ```
 
-This template comes pre-configured with examples of:
+## Production Deployment
 
-1. Setting up your Shopify app in [/app/shopify.server.ts](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/shopify.server.ts)
-2. Querying data using Graphql. Please see: [/app/routes/app.\_index.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/app._index.tsx).
-3. Responding to webhooks. Please see [/app/routes/webhooks.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/webhooks.app.uninstalled.tsx).
+### Vercel Deployment
 
-Please read the [documentation for @shopify/shopify-app-react-router](https://shopify.dev/docs/api/shopify-app-react-router) to see what other API's are available.
+This app is configured for deployment on Vercel.
 
-## Shopify Dev MCP
+1. **Prepare for Deployment**
 
-This template is configured with the Shopify Dev MCP. This instructs [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot) and [Claude Code](https://claude.com/product/claude-code) to use the Shopify dev MCP.  To update the config, please edit `.mcp.json` or `.cursor/mcp.json` depending on which config file your preferred AI Assisted editor uses.  
-
-For more information on the Shopify Dev MCP please read [the  documentation](https://shopify.dev/docs/apps/build/devmcp).
-
-## Deployment
-
-### Application Storage
-
-This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.
-The database is defined as a Prisma schema in `prisma/schema.prisma`.
-
-This use of SQLite works in production if your app runs as a single instance.
-The database that works best for you depends on the data your app needs and how it is queried.
-Here’s a short list of databases providers that provide a free tier to get started:
-
-| Database   | Type             | Hosters                                                                                                                                                                                                                               |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MySQL      | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mysql), [Planet Scale](https://planetscale.com/), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/mysql) |
-| PostgreSQL | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-postgresql), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/postgres)                                   |
-| Redis      | Key-value        | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-redis), [Amazon MemoryDB](https://aws.amazon.com/memorydb/)                                                                                                        |
-| MongoDB    | NoSQL / Document | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mongodb), [MongoDB Atlas](https://www.mongodb.com/atlas/database)                                                                                                  |
-
-To use one of these, you can use a different [datasource provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#datasource) in your `schema.prisma` file, or a different [SessionStorage adapter package](https://github.com/Shopify/shopify-api-js/blob/main/packages/shopify-api/docs/guides/session-storage.md).
-
-### Build
-
-Build the app by running the command below with the package manager of your choice:
-
-Using yarn:
-
-```shell
-yarn build
-```
-
-Using npm:
-
-```shell
+```bash
 npm run build
 ```
 
-Using pnpm:
+2. **Set Environment Variables in Vercel**
 
-```shell
-pnpm run build
+Add all required environment variables in your Vercel project settings:
+- `SHOPIFY_API_KEY`
+- `SHOPIFY_API_SECRET`
+- `SHOPIFY_APP_URL` (your Vercel deployment URL)
+- `OPENAI_API_KEY`
+- `DATABASE_URL` (PostgreSQL recommended for production)
+- `SCOPES`
+
+3. **Update Database for Production**
+
+For production, it's recommended to use PostgreSQL instead of SQLite:
+
+```prisma
+// In prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 ```
 
-## Hosting
-
-When you're ready to set up your app in production, you can follow [our deployment documentation](https://shopify.dev/docs/apps/deployment/web) to host your app on a cloud provider like [Heroku](https://www.heroku.com/) or [Fly.io](https://fly.io/).
-
-When you reach the step for [setting up environment variables](https://shopify.dev/docs/apps/deployment/web#set-env-vars), you also need to set the variable `NODE_ENV=production`.
-
-
-## Gotchas / Troubleshooting
-
-### Database tables don't exist
-
-If you get an error like:
-
-```
-The table `main.Session` does not exist in the current database.
+Then run migrations:
+```bash
+npx prisma migrate deploy
 ```
 
-Create the database for Prisma. Run the `setup` script in `package.json` using `npm`, `yarn` or `pnpm`.
+4. **Deploy to Vercel**
 
-### Navigating/redirecting breaks an embedded app
+```bash
+vercel deploy --prod
+```
 
-Embedded apps must maintain the user session, which can be tricky inside an iFrame. To avoid issues:
+### Docker Deployment
 
-1. Use `Link` from `react-router` or `@shopify/polaris`. Do not use `<a>`.
-2. Use `redirect` returned from `authenticate.admin`. Do not use `redirect` from `react-router`
-3. Use `useSubmit` from `react-router`.
+Build and run with Docker:
 
-This only applies if your app is embedded, which it will be by default.
+```bash
+# Build the image
+docker build -t ai-product-content-generator .
 
-### Webhooks: shop-specific webhook subscriptions aren't updated
+# Run the container
+docker run -p 3000:3000 \
+  -e SHOPIFY_API_KEY=your_key \
+  -e SHOPIFY_API_SECRET=your_secret \
+  -e SHOPIFY_APP_URL=your_url \
+  -e OPENAI_API_KEY=your_openai_key \
+  ai-product-content-generator
+```
 
-If you are registering webhooks in the `afterAuth` hook, using `shopify.registerWebhooks`, you may find that your subscriptions aren't being updated.  
+## API Endpoints
 
-Instead of using the `afterAuth` hook declare app-specific webhooks in the `shopify.app.toml` file.  This approach is easier since Shopify will automatically sync changes every time you run `deploy` (e.g: `npm run deploy`).  Please read these guides to understand more:
+### Health Check
 
-1. [app-specific vs shop-specific webhooks](https://shopify.dev/docs/apps/build/webhooks/subscribe#app-specific-subscriptions)
-2. [Create a subscription tutorial](https://shopify.dev/docs/apps/build/webhooks/subscribe/get-started?deliveryMethod=https)
+```
+GET /health
+```
 
-If you do need shop-specific webhooks, keep in mind that the package calls `afterAuth` in 2 scenarios:
+Returns the health status of the application:
 
-- After installing the app
-- When an access token expires
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-10-05T23:00:00.000Z",
+  "checks": {
+    "database": "connected",
+    "openai": "configured",
+    "shopify": "configured"
+  }
+}
+```
 
-During normal development, the app won't need to re-authenticate most of the time, so shop-specific subscriptions aren't updated. To force your app to update the subscriptions, uninstall and reinstall the app. Revisiting the app will call the `afterAuth` hook.
+## Usage
 
-### Webhooks: Admin created webhook failing HMAC validation
+1. **Install the app** in your Shopify store
+2. **Select a product** from the dropdown
+3. **Choose a variant** (if the product has multiple variants)
+4. **Click "Generate SEO Content"** to create optimized content
+5. **Review and copy** the generated content to use in your Shopify store
 
-Webhooks subscriptions created in the [Shopify admin](https://help.shopify.com/en/manual/orders/notifications/webhooks) will fail HMAC validation. This is because the webhook payload is not signed with your app's secret key.  
+### Generated Content Includes:
 
-The recommended solution is to use [app-specific webhooks](https://shopify.dev/docs/apps/build/webhooks/subscribe#app-specific-subscriptions) defined in your toml file instead.  Test your webhooks by triggering events manually in the Shopify admin(e.g. Updating the product title to trigger a `PRODUCTS_UPDATE`).
+- ✨ **Optimized Title**: SEO-friendly product title with emojis
+- 📝 **Complete Description**: Comprehensive product description with:
+  - Engaging opening paragraphs
+  - Key features and benefits
+  - Compelling reasons to buy
+  - Frequently asked questions
+- 🔑 **Keywords**: Short-tail and long-tail SEO keywords
+- 🏷️ **Shopify Tags**: Ready-to-use product tags
+- 🎯 **Meta Information**: SEO meta title and description
+- 📊 **Custom Metafields**: Structured product data
+- 🖼️ **Image Recommendations**: Suggestions for product photography
 
-### Webhooks: Admin object undefined on webhook events triggered by the CLI
+## Architecture
 
-When you trigger a webhook event using the Shopify CLI, the `admin` object will be `undefined`. This is because the CLI triggers an event with a valid, but non-existent, shop. The `admin` object is only available when the webhook is triggered by a shop that has installed the app.  This is expected.
+### Tech Stack
 
-Webhooks triggered by the CLI are intended for initial experimentation testing of your webhook configuration. For more information on how to test your webhooks, see the [Shopify CLI documentation](https://shopify.dev/docs/apps/tools/cli/commands#webhook-trigger).
+- **Framework**: React Router v7
+- **UI Library**: Shopify Polaris
+- **Database**: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
+- **AI**: OpenAI GPT-4o with vision capabilities
+- **Authentication**: Shopify OAuth
+- **Deployment**: Vercel / Docker
 
-### Incorrect GraphQL Hints
+### Key Features
 
-By default the [graphql.vscode-graphql](https://marketplace.visualstudio.com/items?itemName=GraphQL.vscode-graphql) extension for will assume that GraphQL queries or mutations are for the [Shopify Admin API](https://shopify.dev/docs/api/admin). This is a sensible default, but it may not be true if:
+- **Database Caching**: Generated content is cached for 7 days to reduce API costs
+- **Error Handling**: Comprehensive error handling with retry logic
+- **Rate Limiting**: Built-in protection against API abuse
+- **Image Analysis**: Automatic analysis of product images for better content
+- **Variant Support**: Generate content specific to product variants
 
-1. You use another Shopify API such as the storefront API.
-2. You use a third party GraphQL API.
+## Troubleshooting
 
-If so, please update [.graphqlrc.ts](https://github.com/Shopify/shopify-app-template-react-router/blob/main/.graphqlrc.ts).
+### Database Connection Issues
 
-### Using Defer & await for streaming responses
+If you see database connection errors:
 
-By default the CLI uses a cloudflare tunnel. Unfortunately  cloudflare tunnels wait for the Response stream to finish, then sends one chunk.  This will not affect production.
+```bash
+# Regenerate Prisma client
+npx prisma generate
 
-To test [streaming using await](https://reactrouter.com/api/components/Await#await) during local development we recommend [localhost based development](https://shopify.dev/docs/apps/build/cli-for-apps/networking-options#localhost-based-development).
+# Reset database (development only)
+npx prisma migrate reset
+```
 
-### "nbf" claim timestamp check failed
+### OpenAI API Errors
 
-This is because a JWT token is expired.  If you  are consistently getting this error, it could be that the clock on your machine is not in sync with the server.  To fix this ensure you have enabled "Set time and date automatically" in the "Date and Time" settings on your computer.
+- **Rate Limit**: The app automatically retries with exponential backoff
+- **Invalid API Key**: Check that `OPENAI_API_KEY` is set correctly
+- **Timeout**: Image analysis may take 30-60 seconds for products with multiple images
 
-### Using MongoDB and Prisma
+### Shopify Authentication Issues
 
-If you choose to use MongoDB with Prisma, there are some gotchas in Prisma's MongoDB support to be aware of. Please see the [Prisma SessionStorage README](https://www.npmjs.com/package/@shopify/shopify-app-session-storage-prisma#mongodb).
+- Ensure `SHOPIFY_API_KEY` and `SHOPIFY_API_SECRET` match your app credentials
+- Verify `SHOPIFY_APP_URL` is set to your app's public URL
+- Check that required scopes are granted: `write_products,read_products`
+
+### "nbf" Claim Timestamp Check Failed
+
+This indicates a clock synchronization issue. Enable "Set time and date automatically" in your system settings.
+
+## Development Best Practices
+
+### Code Quality
+
+```bash
+# Run linter
+npm run lint
+
+# Type checking
+npm run typecheck
+
+# Format code (if Prettier is configured)
+npx prettier --write .
+```
+
+### Database Migrations
+
+Always create migrations for schema changes:
+
+```bash
+npx prisma migrate dev --name descriptive_migration_name
+```
+
+### Environment Variables
+
+- Never commit `.env` files
+- Always update `.env.example` when adding new variables
+- Use environment-specific values for different deployments
+
+## Security
+
+- ✅ All secrets stored in environment variables
+- ✅ Input validation on all user inputs
+- ✅ GraphQL error handling
+- ✅ CSRF protection via Shopify App Bridge
+- ✅ Secure session storage with Prisma
+- ✅ Rate limiting on content generation
+
+## Performance Considerations
+
+- **Caching**: Generated content is cached in the database for 7 days
+- **Image Analysis**: Limited to 10 images per product to control costs
+- **Retry Logic**: Automatic retry with exponential backoff for transient failures
+- **Database Indexing**: Optimized queries with proper indexes
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## License
+
+[Your License Here]
+
+## Support
+
+For issues and questions:
+- Create an issue in the GitHub repository
+- Contact: [Your Contact Information]
 
 ## Resources
 
-React Router:
+- [Shopify App Development](https://shopify.dev/docs/apps/getting-started)
+- [React Router Documentation](https://reactrouter.com/home)
+- [Shopify Polaris](https://polaris.shopify.com/)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
 
-- [React Router docs](https://reactrouter.com/home)
+## Changelog
 
-Shopify:
-
-- [Intro to Shopify apps](https://shopify.dev/docs/apps/getting-started)
-- [Shopify App React Router docs](https://shopify.dev/docs/api/shopify-app-react-router)
-- [Shopify CLI](https://shopify.dev/docs/apps/tools/cli)
-- [Shopify App Bridge](https://shopify.dev/docs/api/app-bridge-library).
-- [Polaris Web Components](https://shopify.dev/docs/api/app-home/polaris-web-components).
-- [App extensions](https://shopify.dev/docs/apps/app-extensions/list)
-- [Shopify Functions](https://shopify.dev/docs/api/functions)
-
-Internationalization:
-
-- [Internationalizing your app](https://shopify.dev/docs/apps/best-practices/internationalization/getting-started)
+See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
