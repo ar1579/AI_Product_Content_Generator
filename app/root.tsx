@@ -68,7 +68,7 @@ export function ErrorBoundary() {
               : "We're sorry, but something unexpected happened. Please try again or contact support if the problem persists."
             }
           </p>
-          {process.env.NODE_ENV === "development" && (
+          {process.env['NODE_ENV'] === "development" && (
             <div style={{ 
               backgroundColor: "#f6f6f7", 
               padding: "16px", 

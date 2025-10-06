@@ -236,7 +236,12 @@ export const action: ActionFunction = async ({ request }) => {
       { variables: { id: productId } },
     )
 
-    const data = await response.json()
+    const data = await response.json() as {
+      data?: {
+        product?: any
+      }
+      errors?: Array<{ message: string }>
+    }
 
     // Check for GraphQL errors
     if (data.errors) {

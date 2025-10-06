@@ -8,10 +8,10 @@ declare global {
 let prisma: PrismaClient;
 
 try {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env['NODE_ENV'] !== "production") {
     if (!global.prismaGlobal) {
       global.prismaGlobal = new PrismaClient({
-        log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+        log: process.env['NODE_ENV'] === "development" ? ["error", "warn"] : ["error"],
       });
     }
     prisma = global.prismaGlobal;
