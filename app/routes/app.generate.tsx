@@ -44,6 +44,44 @@ interface LoaderData {
   }
 }
 
+interface ShopifyImageEdge {
+  node: {
+    url: string
+    altText: string | null
+  }
+}
+
+interface ShopifyVariantEdge {
+  node: {
+    title: string | null
+    price: string
+    sku: string | null
+  }
+}
+
+interface ShopifyProductNode {
+  id: string
+  title: string
+  description: string | null
+  descriptionHtml: string | null
+  vendor: string | null
+  productType: string | null
+  tags: string[]
+  images: {
+    edges: ShopifyImageEdge[]
+  }
+  variants: {
+    edges: ShopifyVariantEdge[]
+  }
+}
+
+interface ShopifyProductQueryResponse {
+  data?: {
+    product?: ShopifyProductNode
+  }
+  errors?: Array<{ message: string }>
+}
+
 // Helper function to extract image URLs from HTML description using cheerio
 function extractImagesFromHTML(html: string): string[] {
   if (!html) return []
@@ -83,18 +121,20 @@ async function saveGeneratedContent(
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7) // Cache for 7 days
 
+  const variantKey = selectedVariant ?? ""
+
   await db.generatedContent.upsert({
     where: {
       shop_productId_selectedVariant: {
         shop,
         productId,
-        selectedVariant: selectedVariant || null,
+        selectedVariant: variantKey,
       },
     },
     create: {
       shop,
       productId,
-      selectedVariant: selectedVariant || null,
+      selectedVariant: variantKey,
       title: content.title,
       productDescription: content.productDescription,
       keyFeatures: JSON.stringify(content.keyFeatures),
@@ -138,12 +178,14 @@ async function loadGeneratedContent(
   productId: string,
   selectedVariant: string | null
 ): Promise<{ content: OptimizedContent; originalProduct: { title: string; description: string } } | null> {
+  const variantKey = selectedVariant ?? ""
+
   const cached = await db.generatedContent.findUnique({
     where: {
       shop_productId_selectedVariant: {
         shop,
         productId,
-        selectedVariant: selectedVariant || null,
+        selectedVariant: variantKey,
       },
     },
   })
@@ -236,12 +278,7 @@ export const action: ActionFunction = async ({ request }) => {
       { variables: { id: productId } },
     )
 
-    const data = await response.json() as {
-      data?: {
-        product?: any
-      }
-      errors?: Array<{ message: string }>
-    }
+    const data = await response.json() as ShopifyProductQueryResponse
 
     // Check for GraphQL errors
     if (data.errors) {
@@ -255,36 +292,21 @@ export const action: ActionFunction = async ({ request }) => {
 
     const productNode = data.data.product
 
-    interface ImageEdge {
-      node: {
-        url: string
-        altText: string | null
-      }
-    }
-
-    interface VariantEdge {
-      node: {
-        title: string | null
-        price: string
-        sku: string | null
-      }
-    }
-
     const product: ShopifyProduct = {
       id: productNode.id,
       title: productNode.title,
-      description: productNode.description || "",
-      vendor: productNode.vendor || "",
-      productType: productNode.productType || "",
-      tags: productNode.tags || [],
-      images: productNode.images.edges.map((img: ImageEdge) => ({
+      description: productNode.description ?? "",
+      vendor: productNode.vendor ?? "",
+      productType: productNode.productType ?? "",
+      tags: productNode.tags ?? [],
+      images: productNode.images.edges.map((img) => ({
         src: img.node.url,
-        alt: img.node.altText || undefined,
+        alt: img.node.altText ?? undefined,
       })),
-      variants: productNode.variants.edges.map((v: VariantEdge) => ({
-        title: v.node.title || undefined,
-        price: v.node.price,
-        sku: v.node.sku || undefined,
+      variants: productNode.variants.edges.map((variant) => ({
+        title: variant.node.title ?? undefined,
+        price: variant.node.price,
+        sku: variant.node.sku ?? undefined,
       })),
     }
 
@@ -617,3 +639,4 @@ export default function Generate() {
     </Page>
   )
 }
+
