@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "22ffb2a57e2f93761d02c9166a43a37c"
-name = "AI Product Content Generator"
+client_id = "YOUR_SHOPIFY_CLIENT_ID"
+name = "AI Product Content Generator"        
 application_url = "https://example.com"
 embedded = true
 
