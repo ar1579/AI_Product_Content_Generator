@@ -1,8 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { redirect, Form, useLoaderData } from "react-router";
-
 import { login } from "../../shopify.server";
-
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -19,36 +17,45 @@ export default function App() {
   const { showForm } = useLoaderData<typeof loader>();
 
   return (
-    <div className={styles['index']}>
-      <div className={styles['content']}>
-        <h1 className={styles['heading']}>A short heading about [your app]</h1>
-        <p className={styles['text']}>
-          A tagline about [your app] that describes your value proposition.
+    <div className={styles["index"]}>
+      <div className={styles["content"]}>
+        <h1 className={styles["heading"]}>
+          AI Product Content Generator for Shopify
+        </h1>
+        <p className={styles["text"]}>
+          Smarter Product Descriptions with AI
         </p>
+
         {showForm && (
-          <Form className={styles['form']} method="post" action="/auth/login">
-            <label className={styles['label']}>
+          <Form className={styles["form"]} method="post" action="/auth/login">
+            <label className={styles["label"]}>
               <span>Shop domain</span>
-              <input className={styles['input']} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
+              <input
+                className={styles["input"]}
+                type="text"
+                name="shop"
+                placeholder="e.g: my-shop-domain.myshopify.com"
+              />
             </label>
-            <button className={styles['button']} type="submit">
+            <button className={styles["button"]} type="submit">
               Log in
             </button>
           </Form>
         )}
-        <ul className={styles['list']}>
+
+        <ul className={styles["list"]}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Generate Product Descriptions Instantly.</strong> Use AI to
+            create high-quality, engaging, and SEO-optimized product copy in
+            seconds.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Bulk Content Creation.</strong> Generate descriptions for
+            multiple products at once—perfect for large Shopify stores.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Customizable Tone and Style.</strong> Adjust voice and tone
+            to match your brand and engage your audience more effectively.
           </li>
         </ul>
       </div>
