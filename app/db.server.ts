@@ -23,16 +23,22 @@ try {
   } else {
     prisma = new PrismaClient({
       log: ["error"],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
     })
   }
 
   prisma
     .$connect()
     .then(() => {
-      console.log("✅ Database connected successfully")
+      console.log("✅ Database connected successfully to PostgreSQL")
     })
     .catch((error) => {
       console.error("❌ Failed to connect to database:", error)
+      // Don't throw - allow app to start and retry connections
     })
 
   // Graceful shutdown
