@@ -7,7 +7,7 @@
     "extensions/*"
   ],
   "scripts": {
-    "build": "react-router build",
+    "build": "prisma generate && react-router build",
     "config:link": "shopify app config link",
     "config:use": "shopify app config use",
     "deploy": "shopify app deploy",
