@@ -1,21 +1,28 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { Outlet, useLoaderData, useRouteError } from "react-router";
-import { boundary } from "@shopify/shopify-app-react-router/server";
-import { AppProvider as ShopifyAppProvider } from "@shopify/shopify-app-react-router/react";
-import { AppProvider as PolarisAppProvider } from "@shopify/polaris";
-import "@shopify/polaris/build/esm/styles.css";
-import enTranslations from "@shopify/polaris/locales/en.json";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router"
+import { Outlet, useLoaderData, useRouteError } from "react-router"
+import { boundary } from "@shopify/shopify-app-react-router/server"
+import { AppProvider as ShopifyAppProvider } from "@shopify/shopify-app-react-router/react"
+import { AppProvider as PolarisAppProvider } from "@shopify/polaris"
+import "@shopify/polaris/build/esm/styles.css"
+import enTranslations from "@shopify/polaris/locales/en.json"
 
-import { authenticate } from "../shopify.server";
+import { authenticate } from "../shopify.server"
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  try {
+    console.log("[v0] Authenticating request from:", request.url)
+    await authenticate.admin(request)
+    console.log("[v0] Authentication successful")
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
-};
+    return { apiKey: process.env.SHOPIFY_API_KEY || "" }
+  } catch (error) {
+    console.error("[v0] Authentication error:", error)
+    throw error
+  }
+}
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey } = useLoaderData<typeof loader>()
 
   return (
     <ShopifyAppProvider embedded apiKey={apiKey}>
@@ -23,13 +30,13 @@ export default function App() {
         <Outlet />
       </PolarisAppProvider>
     </ShopifyAppProvider>
-  );
+  )
 }
 
 export function ErrorBoundary() {
-  return boundary.error(useRouteError());
+  return boundary.error(useRouteError())
 }
 
 export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
-};
+  return boundary.headers(headersArgs)
+}
