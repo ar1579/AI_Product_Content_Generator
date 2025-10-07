@@ -15,25 +15,25 @@ This document summarizes all the fixes and improvements made to address the issu
 ### 1. ✅ Removed Hardcoded Client ID
 **File:** `shopify.app.toml`  
 **Change:** Replaced hardcoded `client_id` with environment variable reference
-```toml
+\`\`\`toml
 # Before
 client_id = "ab24c9a5bb076ec51481b7f0c2411911"
 
 # After
 client_id = "$SHOPIFY_API_KEY"
-```
+\`\`\`
 **Impact:** Prevents exposure of sensitive credentials in version control
 
 ### 2. ✅ Fixed Placeholder Application URL
 **File:** `shopify.app.toml`  
 **Change:** Updated to use environment variable
-```toml
+\`\`\`toml
 # Before
 application_url = "https://example.com"
 
 # After
 application_url = "$SHOPIFY_APP_URL"
-```
+\`\`\`
 **Impact:** App will now use the correct URL from environment variables
 
 ### 3. ✅ Added Database Connection Error Handling
@@ -73,11 +73,11 @@ application_url = "$SHOPIFY_APP_URL"
 ### 5. ✅ Added OpenAI API Key Validation
 **File:** `app/utils/openai.server.ts`  
 **Change:** Added validation on module load
-```typescript
+\`\`\`typescript
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY environment variable is required but not set")
 }
-```
+\`\`\`
 **Impact:** Application fails fast with clear error message if API key is missing
 
 ### 6. ✅ Comprehensive Error Handling for OpenAI API
@@ -146,13 +146,13 @@ if (!process.env.OPENAI_API_KEY) {
 ### 12. ✅ Updated Dockerfile to Node 20
 **File:** `Dockerfile`  
 **Change:**
-```dockerfile
+\`\`\`dockerfile
 # Before
 FROM node:18-alpine
 
 # After
 FROM node:20-alpine
-```
+\`\`\`
 **Impact:** Uses supported Node.js version matching package.json requirements
 
 ### 13. ✅ Added Health Check Endpoint
@@ -366,39 +366,39 @@ Before deploying to production:
 If you're updating an existing deployment:
 
 1. **Pull Latest Changes:**
-   ```bash
+   \`\`\`bash
    git pull origin main
-   ```
+   \`\`\`
 
 2. **Install New Dependencies:**
-   ```bash
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
 3. **Update Environment Variables:**
    - Add any missing variables from `.env.example`
    - Ensure `SHOPIFY_API_KEY` and `SHOPIFY_APP_URL` are set in `shopify.app.toml`
 
 4. **Run Database Migrations:**
-   ```bash
+   \`\`\`bash
    npx prisma migrate deploy
-   ```
+   \`\`\`
 
 5. **Regenerate Prisma Client:**
-   ```bash
+   \`\`\`bash
    npx prisma generate
-   ```
+   \`\`\`
 
 6. **Test Locally:**
-   ```bash
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 7. **Deploy to Production:**
-   ```bash
+   \`\`\`bash
    npm run build
    # Deploy using your preferred method (Vercel, Docker, etc.)
-   ```
+   \`\`\`
 
 ---
 

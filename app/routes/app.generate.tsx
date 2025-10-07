@@ -639,4 +639,3 @@ export default function Generate() {
     </Page>
   )
 }
-

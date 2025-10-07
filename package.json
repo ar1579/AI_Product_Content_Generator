@@ -1,55 +1,91 @@
 {
   "name": "ai-product-content-generator",
   "private": true,
+  "author": "rogge",
+  "type": "module",
+  "workspaces": [
+    "extensions/*"
+  ],
   "scripts": {
     "build": "react-router build",
-    "dev": "shopify app dev",
     "config:link": "shopify app config link",
-    "generate": "shopify app generate",
-    "deploy": "shopify app deploy",
     "config:use": "shopify app config use",
-    "env": "shopify app env",
-    "start": "react-router-serve ./build/server/index.js",
+    "deploy": "shopify app deploy",
+    "dev": "shopify app dev",
     "docker-start": "npm run setup && npm run start",
-    "setup": "prisma generate && prisma migrate deploy",
-    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "shopify": "shopify",
-    "prisma": "prisma",
+    "env": "shopify app env",
+    "generate": "shopify app generate",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite",
-    "typecheck": "react-router typegen && tsc --noEmit"
+    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "prisma": "prisma",
+    "setup": "prisma generate && prisma migrate deploy",
+    "shopify": "shopify",
+    "start": "react-router-serve ./build/server/index.js",
+    "typecheck": "react-router typegen && tsc --noEmit",
+    "vite": "vite"
   },
-  "type": "module",
-  "engines": {
-    "node": ">=20.10"
+  "resolutions": {
+    "@graphql-codegen/client-preset": "4.7.0",
+    "@graphql-codegen/typescript-operations": "4.5.0",
+    "@graphql-tools/url-loader": "8.0.16"
+  },
+  "overrides": {
+    "@graphql-codegen/client-preset": "4.7.0",
+    "@graphql-codegen/typescript-operations": "4.5.0",
+    "@graphql-tools/url-loader": "8.0.16"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.42",
-    "@prisma/client": "^6.16.3",
-    "@react-router/dev": "^7.9.1",
-    "@react-router/fs-routes": "^7.9.1",
-    "@react-router/node": "^7.9.1",
+    "@ai-sdk/openai": "latest",
+    "@prisma/client": "latest",
+    "@react-router/dev": "latest",
+    "@react-router/fs-routes": "latest",
+    "@react-router/node": "latest",
     "@react-router/serve": "^7.9.1",
     "@shopify/app-bridge-react": "^4.1.6",
-    "@shopify/polaris": "^13.9.5",
-    "@shopify/shopify-app-react-router": "^1.0.0",
-    "@shopify/shopify-app-session-storage-prisma": "^7.0.0",
-    "ai": "^5.0.60",
-    "cheerio": "^1.1.2",
-    "isbot": "^5.1.0",
-    "lucide-react": "0.544.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "vite-tsconfig-paths": "^5.0.1"
+    "@shopify/polaris": "latest",
+    "@shopify/shopify-api": "latest",
+    "@shopify/shopify-app-react-router": "latest",
+    "@shopify/shopify-app-session-storage": "latest",
+    "@shopify/shopify-app-session-storage-prisma": "latest",
+    "@vitejs/plugin-rsc": "latest",
+    "ai": "latest",
+    "cheerio": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cosmiconfig-toml-loader": "latest",
+    "fs": "latest",
+    "graphql": "latest",
+    "graphql-config": "latest",
+    "isbot": "latest",
+    "jiti": "latest",
+    "less": "latest",
+    "lightningcss": "latest",
+    "lucide-react": "^0.454.0",
+    "next": "15.2.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "sass": "latest",
+    "sass-embedded": "latest",
+    "stream": "latest",
+    "stylus": "latest",
+    "sugarss": "latest",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7",
+    "terser": "latest",
+    "tsx": "latest",
+    "vite-tsconfig-paths": "latest",
+    "wrangler": "latest",
+    "yaml": "latest",
+    "zod": "latest"
   },
   "devDependencies": {
     "@shopify/api-codegen-preset": "^1.1.1",
     "@shopify/polaris-types": "^1.0.0",
     "@shopify/shopify-app-express": "^6.0.0",
     "@types/eslint": "^9.6.1",
-    "@types/node": "^22.2.0",
-    "@types/react": "^18.2.31",
-    "@types/react-dom": "^18.2.14",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
     "@vercel/react-router": "^1.2.3",
@@ -59,27 +95,18 @@
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss": "^8.5",
     "prettier": "^3.2.4",
     "prisma": "^6.16.3",
     "react-router": "^7.9.3",
-    "typescript": "^5.2.2",
+    "tailwindcss": "4.1.14",
+    "typescript": "^5",
     "vite": "^6.2.2"
   },
-  "workspaces": [
-    "extensions/*"
-  ],
+  "engines": {
+    "node": ">=20.10"
+  },
   "trustedDependencies": [
     "@shopify/plugin-cloudflare"
-  ],
-  "resolutions": {
-    "@graphql-tools/url-loader": "8.0.16",
-    "@graphql-codegen/client-preset": "4.7.0",
-    "@graphql-codegen/typescript-operations": "4.5.0"
-  },
-  "overrides": {
-    "@graphql-tools/url-loader": "8.0.16",
-    "@graphql-codegen/client-preset": "4.7.0",
-    "@graphql-codegen/typescript-operations": "4.5.0"
-  },
-  "author": "rogge"
+  ]
 }

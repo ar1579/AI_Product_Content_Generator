@@ -27,9 +27,9 @@ Before you begin, you'll need:
 2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup)
 3. **Test Store**: Set up a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or [Shopify Plus sandbox](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store)
 4. **Shopify CLI**: Install globally
-   ```bash
+   \`\`\`bash
    npm install -g @shopify/cli@latest
-   ```
+   \`\`\`
 5. **OpenAI API Key**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 
 ## Environment Variables
@@ -38,7 +38,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ### Required Variables
 
-```env
+\`\`\`env
 # Shopify App Configuration
 SHOPIFY_API_KEY=your_shopify_api_key_here
 SHOPIFY_API_SECRET=your_shopify_api_secret_here
@@ -47,11 +47,11 @@ SCOPES=write_products,read_products
 
 # OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key_here
-```
+\`\`\`
 
 ### Optional Variables
 
-```env
+\`\`\`env
 # Custom Shop Domain (if applicable)
 SHOP_CUSTOM_DOMAIN=your-custom-domain.myshopify.com
 
@@ -61,7 +61,7 @@ DATABASE_URL=postgresql://user:password@host:port/database
 # Server Configuration
 PORT=3000
 NODE_ENV=development
-```
+\`\`\`
 
 **Note**: A `.env.example` file is provided as a template. Copy it to `.env` and fill in your values.
 
@@ -69,33 +69,33 @@ NODE_ENV=development
 
 ### 1. Clone or Initialize the App
 
-```bash
+\`\`\`bash
 # If using Shopify CLI to create new app
 shopify app init --template=https://github.com/Shopify/shopify-app-template-react-router
 
 # Or clone this repository
 git clone <your-repo-url>
 cd AI_Product_Content_Generator
-```
+\`\`\`
 
 ### 2. Install Dependencies
 
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### 3. Set Up Environment Variables
 
-```bash
+\`\`\`bash
 cp .env.example .env
 # Edit .env with your actual values
-```
+\`\`\`
 
 ### 4. Set Up Database
 
-```bash
+\`\`\`bash
 npm run setup
-```
+\`\`\`
 
 This will:
 - Generate Prisma client
@@ -106,11 +106,11 @@ This will:
 
 ### Start Development Server
 
-```bash
+\`\`\`bash
 npm run dev
 # or
 shopify app dev
-```
+\`\`\`
 
 This will:
 - Start the development server
@@ -121,7 +121,7 @@ Press `P` to open the app URL in your browser.
 
 ### Database Management
 
-```bash
+\`\`\`bash
 # Generate Prisma client after schema changes
 npx prisma generate
 
@@ -133,7 +133,7 @@ npx prisma migrate deploy
 
 # Open Prisma Studio (database GUI)
 npx prisma studio
-```
+\`\`\`
 
 ## Production Deployment
 
@@ -143,9 +143,9 @@ This app is configured for deployment on Vercel.
 
 1. **Prepare for Deployment**
 
-```bash
+\`\`\`bash
 npm run build
-```
+\`\`\`
 
 2. **Set Environment Variables in Vercel**
 
@@ -161,30 +161,30 @@ Add all required environment variables in your Vercel project settings:
 
 For production, it's recommended to use PostgreSQL instead of SQLite:
 
-```prisma
+\`\`\`prisma
 // In prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-```
+\`\`\`
 
 Then run migrations:
-```bash
+\`\`\`bash
 npx prisma migrate deploy
-```
+\`\`\`
 
 4. **Deploy to Vercel**
 
-```bash
+\`\`\`bash
 vercel deploy --prod
-```
+\`\`\`
 
 ### Docker Deployment
 
 Build and run with Docker:
 
-```bash
+\`\`\`bash
 # Build the image
 docker build -t ai-product-content-generator .
 
@@ -195,19 +195,19 @@ docker run -p 3000:3000 \
   -e SHOPIFY_APP_URL=your_url \
   -e OPENAI_API_KEY=your_openai_key \
   ai-product-content-generator
-```
+\`\`\`
 
 ## API Endpoints
 
 ### Health Check
 
-```
+\`\`\`
 GET /health
-```
+\`\`\`
 
 Returns the health status of the application:
 
-```json
+\`\`\`json
 {
   "status": "healthy",
   "timestamp": "2025-10-05T23:00:00.000Z",
@@ -217,7 +217,7 @@ Returns the health status of the application:
     "shopify": "configured"
   }
 }
-```
+\`\`\`
 
 ## Usage
 
@@ -266,13 +266,13 @@ Returns the health status of the application:
 
 If you see database connection errors:
 
-```bash
+\`\`\`bash
 # Regenerate Prisma client
 npx prisma generate
 
 # Reset database (development only)
 npx prisma migrate reset
-```
+\`\`\`
 
 ### OpenAI API Errors
 
@@ -294,7 +294,7 @@ This indicates a clock synchronization issue. Enable "Set time and date automati
 
 ### Code Quality
 
-```bash
+\`\`\`bash
 # Run linter
 npm run lint
 
@@ -303,15 +303,15 @@ npm run typecheck
 
 # Format code (if Prettier is configured)
 npx prettier --write .
-```
+\`\`\`
 
 ### Database Migrations
 
 Always create migrations for schema changes:
 
-```bash
+\`\`\`bash
 npx prisma migrate dev --name descriptive_migration_name
-```
+\`\`\`
 
 ### Environment Variables
 

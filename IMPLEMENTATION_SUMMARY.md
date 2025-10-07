@@ -20,7 +20,7 @@ This document summarizes all the fixes and improvements made to address the issu
 **Issue:** Client ID was hardcoded in the configuration file, exposing sensitive credentials.
 
 **Fix:**
-```toml
+\`\`\`toml
 # Before
 client_id = "ab24c9a5bb076ec51481b7f0c2411911"
 application_url = "https://example.com"
@@ -28,7 +28,7 @@ application_url = "https://example.com"
 # After
 client_id = "$SHOPIFY_API_KEY"
 application_url = "$SHOPIFY_APP_URL"
-```
+\`\`\`
 
 **Impact:** Eliminates security risk of exposed credentials in version control.
 
@@ -70,7 +70,7 @@ application_url = "$SHOPIFY_APP_URL"
 - Reduces OpenAI API costs through persistent caching
 
 **New Database Schema:**
-```prisma
+\`\`\`prisma
 model GeneratedContent {
   id                    String   @id @default(uuid())
   shop                  String
@@ -88,7 +88,7 @@ model GeneratedContent {
   @@index([productId])
   @@index([expiresAt])
 }
-```
+\`\`\`
 
 ---
 
@@ -115,13 +115,13 @@ model GeneratedContent {
 - Detailed error logging for debugging
 
 **Error Handling Features:**
-```typescript
+\`\`\`typescript
 - Rate limit detection and automatic retry with delay
 - Timeout protection with AbortController
 - Authentication error detection (no retry)
 - Structured error messages for users
 - Fallback behavior for non-critical operations
-```
+\`\`\`
 
 ---
 
@@ -184,18 +184,18 @@ model GeneratedContent {
 - More reliable and maintainable code
 
 **Before:**
-```typescript
+\`\`\`typescript
 const imgTagRegex = /<img[^>]+src=["']([^"']+)["']/gi
-```
+\`\`\`
 
 **After:**
-```typescript
+\`\`\`typescript
 const $ = cheerio.load(html)
 $('img').each((_, element) => {
   const src = $(element).attr('src')
   // Proper URL handling
 })
-```
+\`\`\`
 
 ---
 
@@ -203,13 +203,13 @@ $('img').each((_, element) => {
 **File:** `Dockerfile`
 
 **Change:**
-```dockerfile
+\`\`\`dockerfile
 # Before
 FROM node:18-alpine
 
 # After
 FROM node:20-alpine
-```
+\`\`\`
 
 **Reason:** Aligns with package.json requirement (Node >= 20.10) and ensures long-term support.
 
@@ -226,7 +226,7 @@ FROM node:20-alpine
 - Useful for monitoring and deployment health checks
 
 **Response Example:**
-```json
+\`\`\`json
 {
   "status": "healthy",
   "timestamp": "2025-10-05T23:00:00.000Z",
@@ -236,7 +236,7 @@ FROM node:20-alpine
     "shopify": "configured"
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -263,14 +263,14 @@ FROM node:20-alpine
 **File:** `tsconfig.json`
 
 **Added Strict Checks:**
-```json
+\`\`\`json
 {
   "noUncheckedIndexedAccess": true,
   "noImplicitOverride": true,
   "noPropertyAccessFromIndexSignature": true,
   "exactOptionalPropertyTypes": false
 }
-```
+\`\`\`
 
 **Benefits:**
 - Catches more potential bugs at compile time
@@ -285,7 +285,7 @@ FROM node:20-alpine
 **File:** `.prettierrc` (new file)
 
 **Configuration:**
-```json
+\`\`\`json
 {
   "semi": false,
   "singleQuote": true,
@@ -295,7 +295,7 @@ FROM node:20-alpine
   "arrowParens": "always",
   "endOfLine": "lf"
 }
-```
+\`\`\`
 
 **Benefits:**
 - Consistent code formatting across the project
@@ -327,13 +327,13 @@ FROM node:20-alpine
 **File:** `vite.config.ts`
 
 **Changes:**
-```typescript
+\`\`\`typescript
 cors: {
   origin: process.env.SHOPIFY_APP_URL || true,
   credentials: true,
   preflightContinue: true,
 }
-```
+\`\`\`
 
 **Benefits:**
 - More secure CORS policy
@@ -460,14 +460,14 @@ While all critical issues have been resolved, here are some optional enhancement
    - Update `SHOPIFY_API_KEY` and `SHOPIFY_APP_URL` in Shopify Partner Dashboard
 
 2. **Run Database Migration:**
-   ```bash
+   \`\`\`bash
    npx prisma migrate deploy
-   ```
+   \`\`\`
 
 3. **Verify Health Check:**
-   ```bash
+   \`\`\`bash
    curl https://your-app-url.com/health
-   ```
+   \`\`\`
 
 4. **Test Content Generation:**
    - Generate content for a test product
